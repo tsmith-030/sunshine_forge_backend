@@ -12,17 +12,16 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
@@ -69,7 +68,7 @@ public class SpaceControllerTest {
                 .id(1)
                 .build();
 
-        List<Integer> spaceList = Arrays.asList(spaceOne.getId(), spaceTwo.getId());
+        List<Space> spaceList = Arrays.asList(spaceOne, spaceTwo);
 
         when(service.listSpaces()).thenReturn(spaceList);
 
@@ -101,5 +100,45 @@ public class SpaceControllerTest {
                 .andExpect(status().isOk());
 
         verify(service).getSpace(anyInt());
+    }
+
+    @Test
+    public void post_updateSpace_returnsSpaceWithUpdatedAttributes() throws Exception {
+
+        Space spaceOne = Space.builder()
+                .id(1)
+                .disk_quotamb(2)
+                .memory_quotamb(3)
+                .name("Old Space")
+                .build();
+
+        Space updatedSpace = Space.builder()
+                .id(1)
+                .disk_quotamb(2)
+                .memory_quotamb(3)
+                .name("Updated Space")
+                .build();
+
+        when(service.updateSpace(any(Space.class))).thenReturn(updatedSpace);
+
+        mockMvc.perform(post("/api/spaces/{id}", spaceOne.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new Gson().toJson(updatedSpace)))
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.disk_quotamb").value(2))
+                .andExpect(jsonPath("$.memory_quotamb").value(3))
+                .andExpect(jsonPath("$.name").value("Updated Space"))
+                .andExpect(status().isOk());
+
+        verify(service).updateSpace(any(Space.class));
+    }
+
+    @Test
+    public void delete_deleteSpace_removesSpaceAndReturnsA200() throws Exception {
+
+        mockMvc.perform(delete("/api/spaces/{id}", 1))
+            .andExpect(status().isOk());
+
+        verify(service).deleteSpace(anyInt());
     }
 }
